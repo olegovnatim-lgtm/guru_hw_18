@@ -1,10 +1,13 @@
 import pytest
+import logging
 import attach
 import os
 from dotenv import load_dotenv
 from selene import browser
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+
+logger = logging.getLogger(__name__)
 
 
 def pytest_addoption(parser):
@@ -97,3 +100,14 @@ def setup_browser(request):
 def load_env():
     load_dotenv()
 
+@pytest.fixture(scope="session", autouse=True)
+def log_options(request, load_env):
+    logger.info("=== Параметры запуска ===")
+    logger.info(f"browser:         {request.config.getoption('--browser')}")
+    logger.info(f"browser_version: {request.config.getoption('--browser_version')}")
+    logger.info(f"headless:        {request.config.getoption('--headless')}")
+    logger.info(f"base_url:        {request.config.getoption('--base-url')}")
+    logger.info(f"selenoid_url:    {request.config.getoption('--selenoid-url')}")
+    logger.info(f"window_size:     {request.config.getoption('--window-size')}")
+    logger.info(f"SELENOID_LOGIN:  {os.getenv('SELENOID_LOGIN')}")
+    logger.info("========================")
