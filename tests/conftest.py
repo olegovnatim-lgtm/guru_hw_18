@@ -1,34 +1,99 @@
 import pytest
+import attach
+import os
+from dotenv import load_dotenv
 from selene import browser
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-import attach
 
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--browser",
+        default="chrome",
+        help="Browser to use"
+    )
+    parser.addoption(
+        "--browser_version",
+        default="128.0",
+        help="Browser version to use"
+    )
+    parser.addoption(
+        "--headless",
+        default=False,
+        choices=(True, False),
+        help="Browser version to use"
+    )
+    parser.addoption(
+        "--base-url",
+        default="https://demoqa.com",
+        help="URL for test"
+    )
+    parser.addoption(
+        "--selenoid-url",
+        default="selenoid.autotests.cloud/wd/hub",
+        help="URL of Selenoid"
+    )
+    parser.addoption(
+        "--window-size",
+        default="1920,1080",
+        choices=(
+            "1920,1080",
+            "1280,720",
+            "768,1024",
+        ),
+        help="Window Size of Browser"
+    )
 
 
 @pytest.fixture(scope='function', autouse=True)
-def setup_browser():
+def setup_browser(request):
+    login = os.getenv("SELENOID_LOGIN")
+    password = os.getenv("SELENOID_PASSWORD")
+
+    browser_name     = request.config.getoption("--browser")
+    browser_version  = request.config.getoption("--browser_version")
+    headless         = request.config.getoption("--headless")
+    base_url         = request.config.getoption("--base-url")
+    selenoid_url     = request.config.getoption("--selenoid-url")
+    window_size      = request.config.getoption("--window-size")  # добавили
+
     options = Options()
+
+    if headless:
+        options.add_argument("--headless")
+
+    options.add_argument(f"--window-size={window_size}")  # добавили
+
     selenoid_capabilities = {
-        "browserName": "chrome",
-        "browserVersion": '128.0',
+        "browserName": browser_name,
+        "browserVersion": browser_version,
         "selenoid:options": {
             "enableVNC": True,
             "enableVideo": True
         }
     }
     options.capabilities.update(selenoid_capabilities)
-    options.add_argument("--window-size=1920,1080")
+
     driver = webdriver.Remote(
-        command_executor="https://user1:1234@selenoid.autotests.cloud/wd/hub",
+        command_executor = f"https://{login}:{password}@{selenoid_url}",
         options=options
     )
-    browser.config.driver = driver
 
-    yield  browser
+    browser.config.driver = driver
+    browser.config.base_url = base_url
+
+    yield browser
+
     attach.add_screenshot(driver)
     attach.add_page_source(driver)
     attach.add_console_logs(driver)
     attach.add_video(driver)
 
     driver.quit()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def load_env():
+    load_dotenv()
+
