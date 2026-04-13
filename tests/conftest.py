@@ -20,9 +20,9 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--headless",
-        default=False,
-        choices=(True, False),
-        help="Browser version to use"
+        default="false",
+        choices=("true", "false"),  # строки вместо булевых
+        help="Run browser in headless mode"
     )
     parser.addoption(
         "--base-url",
